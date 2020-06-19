@@ -12,6 +12,8 @@
 #include <QJsonObject>
 
 #include <sqlitedb.h>
+#include <common.h>
+#include <QVector>
 
 class MqttClientUpdate : public QObject
 {
@@ -22,16 +24,14 @@ public:
 
     void subscribe();
 
-private slots:
-    void messageReceived(const QByteArray &message, const QMqttTopicName &topic);
-    void stateChanged(QMqttClient::ClientState state);
-    void subscriptionStateChanged(QMqttSubscription::SubscriptionState state);
-    void publish();
-
-//signals:
     void receivedRequest();
     void receivedDBUpdatedData();
     int updateDB(QByteArray message);
+private slots:
+    void messageReceived(const QByteArray &message, const QMqttTopicName &topic);
+    void stateChanged(QMqttClient::ClientState state);
+//    void subscriptionStateChanged(QMqttSubscription::SubscriptionState state);
+//    void publish();
 
 private:
     QMqttClient *m_client;
@@ -43,6 +43,9 @@ private:
 
     SQLiteDB sqlitedb;
 
+    QVector<json> addedFail_jsonVec;
+    QVector<QString> removedFail_jsonVec;
+    QVector<json> updatedFail_jsonVec;
 };
 
 #endif // MQTTCLIENTUPDATE_H

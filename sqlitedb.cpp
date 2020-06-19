@@ -1,20 +1,31 @@
 #include "sqlitedb.h"
 #include "glog/logging.h"
+#include <stdlib.h>
 
 SQLiteDB::SQLiteDB(QObject *parent) : QObject(parent)
 {
+#ifdef LOG_DEBUG_NO
+    LOG(INFO) << "[DEBUG] " << __func__;
+    LOG(INFO) << "[DEBUG] dbPath: " << dbPath.toStdString();
+    LOG(INFO) << "[DEBUG] dbTableName: " << dbTableName.toStdString();
+#endif
+//    openDatabase();
+
 }
 
 SQLiteDB::~SQLiteDB(){}
 
+void SQLiteDB::initDatabase()
+{
+    QString dbType = "QSQLITE";
+//    QSqlDatabase db = QSqlDatabase::addDatabase(dbType);
+
+    db = QSqlDatabase::addDatabase(dbType);
+    db.setDatabaseName(dbPath);
+    LOG(INFO) << "[InitDatabase] DB Path: " << dbPath.toStdString();
+}
 void SQLiteDB::openDatabase()
 {
-//    dbPath = DB_NAME;
-
-    QString dbType = "QSQLITE";
-    QSqlDatabase db = QSqlDatabase::addDatabase(dbType);
-    db.setDatabaseName(dbPath);
-
     if(!db.open()){
         LOG(INFO) << "<" << __func__ << "> Could not open db! " << db.lastError().text().toStdString();
     }
@@ -23,7 +34,13 @@ void SQLiteDB::openDatabase()
     }
 }
 
-void SQLiteDB::setDBName(QString DBpath)
+void SQLiteDB::closeDatabase()
+{
+    db.close();
+    LOG(INFO) << "Closed DB";
+}
+
+void SQLiteDB::setDBPath(QString DBpath)
 {
     dbPath = DBpath;
 }
@@ -35,9 +52,9 @@ void SQLiteDB::setDBTable(QString DBTableName)
 
 int SQLiteDB::insertPerson(PersonInfo person)
 {
-    LOG(INFO) << "<" << __func__ << "> Inserting " << person.recognize_name.toStdString() << " to db...";
+    LOG(INFO) << "[INSERT] Inserting " << person.recognize_name.toStdString() << " to db...";
 
-    QSqlDatabase db = QSqlDatabase::database(dbPath);
+//    QSqlDatabase db = QSqlDatabase::database(dbPath);
 //    QString table_name = TABLE_NAME;
 
     ///< Check if info already exists in the DB
@@ -46,12 +63,12 @@ int SQLiteDB::insertPerson(PersonInfo person)
     query_check.addBindValue(person.recognize_name);
     if(!query_check.exec()){
         LOG(ERROR) << "<" << __func__ << "> check duplicate Fails [" << db.lastError().text().toStdString() << "]";
-        return 0;
+        return 1;
     }
 
     while (query_check.next()) {
         LOG(WARNING) << "ID: " + person.recognize_name.toStdString() + " exist!";
-        return 0;
+        return 1;
     }
 
     QSqlQuery query(db);
@@ -82,17 +99,16 @@ int SQLiteDB::removePerson(QString key)
 {
     LOG(INFO) << "<" << __func__ << "> Removing " << key.toStdString();
 
-    QSqlDatabase db = QSqlDatabase::database(dbPath);
+//    QSqlDatabase db = QSqlDatabase::database(dbPath);
 
     QSqlQuery query(db);
     QString exec_str;
-//    exec_str = "DELETE FROM " + dbTableName + " WHERE recognize_name = '" + key + "';";
     exec_str = "DELETE FROM " + dbTableName + " WHERE recognize_name = ?;";
 
     query.prepare(exec_str);
     query.addBindValue(key);
     if(query.exec()){
-        LOG(INFO) << "<" << __func__ << "> Removed successful!";
+//        LOG(INFO) << "<" << __func__ << "> Removed successful!";
         return true;
     }
     else{
@@ -106,7 +122,7 @@ int SQLiteDB::updateInfo(PersonInfo person)
 {
     LOG(INFO) << "<" << __func__ << "> Updating " << person.recognize_name.toStdString() << " to db...";
 
-    QSqlDatabase db = QSqlDatabase::database(dbPath);
+//    QSqlDatabase db = QSqlDatabase::database(dbPath);
 //    QString table_name = TABLE_NAME;
 
     ///< Check if info already exists in the DB
@@ -158,16 +174,20 @@ int SQLiteDB::updateInfo(PersonInfo person)
 
 #include <QFile>
 #include <QTextStream>
-#define export_to_json
 
 
 QJsonDocument SQLiteDB::exportIDs()
 {
-    LOG(INFO) << "<" << __func__ << "> Export IDs";
-    QSqlDatabase db = QSqlDatabase::database(dbPath);
+    LOG(INFO) << "[Export IDs]. DB isOpen? " << db.isOpen();
+
+    if(!db.open()){
+        LOG(ERROR) << "<" << __func__ << "> Fail to open database: " << dbPath.toStdString();
+    }
+
     QSqlQuery query(db);
     QString exec_str;
     exec_str = "SELECT recognize_name, Version FROM " + dbTableName;
+//    exec_str = "SELECT recognize_name FROM " + dbTableName;
 
 #if export_to_file
     QString listID = "listIDs.txt";
@@ -177,18 +197,32 @@ QJsonDocument SQLiteDB::exportIDs()
 #else // Export to json
 //    QJsonDocument jsonDoc;
     QJsonArray IDsArr;
-
     QJsonObject IDObject;
 #endif
 
-
     query.prepare(exec_str);
     if(!query.exec()){
+
+#ifdef LOG_DEBUG
+        LOG(INFO) << "[DEBUG] dbPath: " << dbPath.toStdString();
+        LOG(INFO) << "[DEBUG] dbTableName: " << dbTableName.toStdString();
+#endif
         LOG(ERROR) << "<" << __func__ << "> export IDs Fails [" << db.lastError().text().toStdString() << "]";
     }
+
     while (query.next()) {
+// Set if 1 to test
+#if 0
+        LOG(INFO) << "[DEBUG-ExportIDs] query size: " << query.size();
+        for(auto value:query.){
+            LOG(INFO) << query.value(i).toString().toStdString();
+        }
+#else
         QString recognize_name = query.value(0).toString();
         QString ver = query.value(1).toString();
+
+        //FIXME: add update version for old database
+
 
         LOG(INFO) << "<" << __func__ << "> ID-ver: " << recognize_name.toStdString() << " - " << ver.toStdString();
 #if export_to_file
@@ -197,6 +231,7 @@ QJsonDocument SQLiteDB::exportIDs()
         IDObject.insert("id", recognize_name);
         IDObject.insert("ver", ver);
         IDsArr.push_back(IDObject);
+#endif
 #endif
     }
 
@@ -207,15 +242,13 @@ QJsonDocument SQLiteDB::exportIDs()
     return jsonDoc;
 }
 
+#if 0
 void SQLiteDB::updateDB()
 {
     LOG(INFO) << "<" << __func__ << "> Starting update database...";
 
     SQLiteDB db;
 
-
-//    db.setDBName(dbPath);
-//    db.setDBTable(dbTableName);
     db.openDatabase();
 
     uint cnt = 1;
@@ -275,3 +308,9 @@ void SQLiteDB::updateDB()
 //    db.exportIDs();
 
 }
+
+void SQLiteDB::test()
+{
+    LOG(INFO) << "[TEST] " << db.isOpen();
+}
+#endif

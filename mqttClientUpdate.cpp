@@ -3,6 +3,10 @@
 
 MqttClientUpdate::MqttClientUpdate(QObject *parent) : QObject(parent)
 {
+#ifdef LOG_DEBUG
+    LOG(INFO) << "[DEBUG] " << __func__;
+#endif
+
     m_client = new QMqttClient(this);
 
     m_deviceName = QStringLiteral("%1-%2").arg(qAppName()).
@@ -18,11 +22,17 @@ MqttClientUpdate::MqttClientUpdate(QObject *parent) : QObject(parent)
     m_client->setPort(1883);
 
     m_client->connectToHost();
-    m_topics = "topic/#";
+    m_topics = MQTT_TOPIC_COMMON;
 
-//    SQLiteDB sqlitedb;
-    sqlitedb.setDBName("db/cts_client.db");
-    sqlitedb.setDBTable("CTS");
+//    sqlitedb.setDBPath(SQLITE_DBPATH);
+
+    QSettings setting("updateDB.conf", QSettings::IniFormat);
+    QString dbPath = setting.value("dbPath", "UNKNOWN").toString();
+    QString dbTable = setting.value("dbTable", "UNKNOWN").toString();
+
+    sqlitedb.setDBPath(dbPath);
+    sqlitedb.setDBTable(dbTable);
+    sqlitedb.initDatabase();
 }
 
 void MqttClientUpdate::subscribe()
@@ -32,7 +42,7 @@ void MqttClientUpdate::subscribe()
         LOG(ERROR) << "Could not subscribe || topic: " << m_topics.toStdString();
     }
     else{
-        LOG(INFO) << "Subscribed " << m_topics.toStdString() << "successful!";
+        LOG(INFO) << "Subscribed " << m_topics.toStdString() << " successful!";
     }
 }
 
@@ -44,7 +54,7 @@ void MqttClientUpdate::stateChanged(QMqttClient::ClientState state)
         break;
     case QMqttClient::Connected:
         LOG(INFO) << "[mqttClientUpdate] Connected!";
-        subscribe();
+        //        subscribe();
         break;
     case QMqttClient::Disconnected:
         LOG(INFO) << "[mqttClientUpdate] Disconnected!";
@@ -58,20 +68,23 @@ void MqttClientUpdate::messageReceived(const QByteArray &message, const QMqttTop
             .arg(message.size()).arg(topic.name());
     LOG(INFO) << content.toStdString() << std::endl;
 
-    if(topic == tr("topic/GeneralExternalRequests")){
+    if(topic == MQTT_SUBTOPIC_REQUEST_RECEIVED){
         /// received request from Window Form
         /// Export List IDs and publish to Broker
+        ///
+        sqlitedb.openDatabase();
         QJsonDocument jsondoc = sqlitedb.exportIDs();
-        m_client->publish(tr("topic/DB_Status_Ack"), jsondoc.toJson());
-        LOG(INFO) << "[mqttClientUpdate] published ListIDs to 'topic/DB_Status_Ack'";
+        sqlitedb.closeDatabase();
+        m_client->publish((MQTT_TOPIC_REQUEST_RESPONSE), jsondoc.toJson());
+        LOG(INFO) << "[mqttClientUpdate] published ListIDs to "<< MQTT_TOPIC_REQUEST_RESPONSE.toStdString();
     }
 
-    if(topic == tr("topic/DB_Data")){
+    if(topic == MQTT_SUBTOPIC_DBUPDATED_RECEIVED){
         /// Received DB_Data update from window form
         /// Update Local DB follow window form
+        sqlitedb.openDatabase();
         updateDB(message);
-
-
+        sqlitedb.closeDatabase();
     }
 
 }
@@ -86,140 +99,170 @@ MqttClientUpdate::~MqttClientUpdate(){};
 
 int MqttClientUpdate::updateDB(QByteArray message)
 {
-    QJsonDocument doc = QJsonDocument::fromJson(message);
-    QJsonObject jObject = doc.object();
-//    QJsonArray
+    //    QJsonDocument doc = QJsonDocument::fromJson(message);
+    //    QJsonObject jObject = doc.object();
+    //    QJsonValue
 
+    message.replace("\'", "\"");
+    QString messageStr = QString(message);
 
+    //    LOG(INFO) << "MessageStr: " <<  messageStr.toStdString();
+    json j = json::parse(message);
+    uint cnt = 0;
+    uint total = j["add"].size();
+#if 1
+    ///< --- ADD NEW RECORD TO DB ---
+    for (uint i=0; i < total; i++) {
+        PersonInfo person;
+        json json_person = j["add"][i];
+        try {
+            if(json_person["id"] != nullptr){
+                person.recognize_name = QString::fromStdString(json_person["id"]);
+            }
+            else{
+                throw;
+            }
+
+            if(json_person["fullName"] != nullptr){
+                person.fullName = QString::fromStdString(json_person["fullName"]);
+            }
+            else{
+                throw;
+            }
+
+            if(json_person["department"] != nullptr){
+                person.department = QString::fromStdString(json_person["department"]);
+            }
+            else{
+                person.department = "UNKNOWN";
+            }
+
+            if(json_person["level"] != nullptr){
+                person.level = QString::fromStdString(json_person["level"]);
+            }
+            else{
+                person.level = 1;
+            }
+
+            if(json_person["avt"] != nullptr){
+                QByteArray base64Avt = QByteArray::fromStdString(json_person["avt"]);
+                //                QImage avt_img;
+                //                avt_img.loadFromData(QByteArray::fromBase64(base64Avt));
+                //                person.avt = avt_img;
+                person.avtByteArray = base64Avt;
 #if 0
-        // push info need to add to added_vec<PersonInfo>
-        LOG(INFO) << "Push to added_vec<PersonInfo>";
-        for (uint i=0; i < j["add"].size(); i++) {
-            PersonInfo person;
-            json json_person = j["add"][i];
-            try {
-                if(json_person["id"] != nullptr){
-                    person.recognize_name = QString::fromStdString(json_person["id"]);
-                }
-                else{
-                    throw;
-                }
-
-                if(json_person["fullName"] != nullptr){
-                    person.fullName = QString::fromStdString(json_person["fullName"]);
-                }
-                else{
-                    throw;
-                }
-
-                if(json_person["department"] != nullptr){
-                    person.department = QString::fromStdString(json_person["department"]);
-                }
-                else{
-                    person.department = "UNKNOWN";
-                }
-
-                if(json_person["level"] != nullptr){
-                    person.level = QString::fromStdString(json_person["level"]);
-                }
-                else{
-                    person.level = 1;
-                }
-
-                if(json_person["avt"] != nullptr){
-                    QByteArray base64Avt = QByteArray::fromStdString(json_person["avt"]);
-    //                QImage avt_img;
-    //                avt_img.loadFromData(QByteArray::fromBase64(base64Avt));
-    //                person.avt = avt_img;
-                    person.avtByteArray = base64Avt;
-    #if 0
-                    LOG(INFO) << person.avt.bits();
-    #endif
-                }
-
-                if(json_person["ver"] != nullptr){
-                    person.ver = json_person["ver"];
-                }
-
-                added_vec.push_back(person);
-                LOG(INFO) << "<" << __func__ << "> " << i << " - recognize_name" << j["add"][i]["id"];
-
-            } catch (json::exception &e) {
-                LOG(ERROR) << e.what();
-                addedFail_jsonVec.push_back(json_person);
-                LOG(INFO) << "<" << __func__ << "> Have " << addedFail_jsonVec.size() << " json added Fail";
+                LOG(INFO) << person.avt.bits();
+#endif
             }
 
-        }
-
-        LOG(INFO)<< "push recognize_name need to remove to removed_vec";
-        for (uint i=0; i < j["remove"].size(); i++){
-            removed_vec.push_back(QString::fromStdString(j["remove"][i]));
-            LOG(INFO) << "<" << __func__ << "> Have " << removed_vec.size() << " have to remove";
-    //        LOG(INFO) << "add remove: " << j["remove"][i];
-        }
-
-
-        ///< ADD UPDATE TO VECTOR
-        LOG(INFO) << "Push to added_vec<PersonInfo>";
-        for (uint i=0; i < j["update"].size(); i++) {
-            PersonInfo person;
-            json json_person = j["update"][i];
-            try {
-                if(json_person["id"] != nullptr){
-                    person.recognize_name = QString::fromStdString(json_person["id"]);
-                }
-                else{
-                    throw;
-                }
-
-                if(json_person["fullName"] != nullptr){
-                    person.fullName = QString::fromStdString(json_person["fullName"]);
-                }
-                else{
-                    throw;
-                }
-
-                if(json_person["department"] != nullptr){
-                    person.department = QString::fromStdString(json_person["department"]);
-                }
-                else{
-                    person.department = "UNKNOWN";
-                }
-
-                if(json_person["level"] != nullptr){
-                    person.level = QString::fromStdString(json_person["level"]);
-                }
-                else{
-                    person.level = 1;
-                }
-
-                if(json_person["avt"] != nullptr){
-                    QByteArray base64Avt = QByteArray::fromStdString(json_person["avt"]);
-    //                QImage avt_img;
-    //                avt_img.loadFromData(QByteArray::fromBase64(base64Avt));
-    //                person.avt = avt_img;
-                    person.avtByteArray = base64Avt;
-    #if 0
-                    LOG(INFO) << person.avt.bits();
-    #endif
-                }
-
-                if(json_person["ver"] != nullptr){
-                    person.ver = json_person["ver"];
-                }
-
-                updated_vec.push_back(person);
-
-            } catch (json::exception &e) {
-                LOG(ERROR) << e.what();
-                updatedFail_vec.push_back(json_person);
-                LOG(INFO) << "<" << __func__ << "> Had " << addedFail_jsonVec.size() << " info add to updated Fail";
+            if(json_person["ver"] != nullptr){
+                person.ver = json_person["ver"];
             }
 
+            if(sqlitedb.insertPerson(person)){
+                LOG(INFO) << "[INSERT] inserted " << person.fullName.toStdString() << " successful!";
+                cnt ++;
+            }
+            else{ throw;}
+            //                LOG(INFO) << "<" << __func__ << "> " << i << " - recognize_name" << j["add"][i]["id"];
+
+        } catch (json::exception &e) {
+            LOG(ERROR) << e.what();
+            addedFail_jsonVec.push_back(json_person);
+            LOG(INFO) << "<" << __func__ << "> Have " << addedFail_jsonVec.size() << " json added Fail";
         }
+
+    }
+    LOG(INFO) << "[UPDATE-DB] Added: " << cnt << " new done! " << total-cnt << " fail.";
+
+    ///< ------ REMOVE --------
+    cnt = 0;
+    total = j["remove"].size();
+    for (uint i=0; i < total; i++){
+        QString removed_per = QString::fromStdString(j["remove"][i]);
+        if(sqlitedb.removePerson(removed_per)){
+            LOG(INFO) << "[DB-REMOVE] removed " << removed_per.toStdString();
+            cnt++;
+        }
+        else{
+            removedFail_jsonVec.push_back(removed_per);
+        }
+    }
+    LOG(INFO) << "[UPDATE-DB] Removed: " << cnt << " done! " << total-cnt << " fail.";
+
+
+    ///< ADD UPDATE TO VECTOR
+    cnt = 0;
+    total = j["update"].size();
+    for (uint i=0; i < total; i++) {
+        PersonInfo person;
+        json json_person = j["update"][i];
+        try {
+            if(json_person["id"] != nullptr){
+                person.recognize_name = QString::fromStdString(json_person["id"]);
+            }
+            else{
+                throw;
+            }
+
+            if(json_person["fullName"] != nullptr){
+                person.fullName = QString::fromStdString(json_person["fullName"]);
+            }
+            else{
+                throw;
+            }
+
+            if(json_person["department"] != nullptr){
+                person.department = QString::fromStdString(json_person["department"]);
+            }
+            else{
+                person.department = "UNKNOWN";
+            }
+
+            if(json_person["level"] != nullptr){
+                person.level = QString::fromStdString(json_person["level"]);
+            }
+            else{
+                person.level = 1;
+            }
+
+            if(json_person["avt"] != nullptr){
+                QByteArray base64Avt = QByteArray::fromStdString(json_person["avt"]);
+                //                QImage avt_img;
+                //                avt_img.loadFromData(QByteArray::fromBase64(base64Avt));
+                //                person.avt = avt_img;
+                person.avtByteArray = base64Avt;
+#if 0
+                LOG(INFO) << person.avt.bits();
+#endif
+            }
+
+            if(json_person["ver"] != nullptr){
+                person.ver = json_person["ver"];
+            }
+
+            if(sqlitedb.updateInfo(person)){
+                LOG(INFO) << "[DB-UPDATE] updated: " << person.fullName.toStdString();
+                cnt++;
+            }
+            else{
+                throw ;
+            }
+
+        } catch (json::exception &e) {
+            LOG(ERROR) << e.what();
+            updatedFail_jsonVec.push_back(json_person);
+            LOG(INFO) << "[DB-UPDATE] Update fail";
+        }
+
+    }
+    LOG(INFO) << "[UPDATE-DB] updated: " << cnt << " done! " << total-cnt << " fail.";
+
+    ///< --- REPORT to Window app -->
+    QJsonDocument jsondoc = sqlitedb.exportIDs();
+    m_client->publish((MQTT_TOPIC_REQUEST_RESPONSE), jsondoc.toJson());
 
 #endif
-        return 0;
+    return 0;
 
 }

@@ -17,9 +17,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         mqttClientUpdate.cpp \
-        sqlitedb.cpp \
-        update.cpp \
-        updatedb_thread.cpp
+        sqlitedb.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -27,9 +25,11 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 HEADERS += \
+    common.h \
     mqttClientUpdate.h \
-    sqlitedb.h \
-    update.h \
-    updatedb_thread.h
+    sqlitedb.h
 
 LIBS += -L/usr/local/lib -lglog
+
+DISTFILES += \
+    updateDB.conf
