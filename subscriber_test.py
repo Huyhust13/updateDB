@@ -4,7 +4,10 @@ import paho.mqtt.client as mqtt
 import sys
 # This is the Subscriber
 
-SUBSCRIBE_TOPIC = "toApp/#"
+# SUBSCRIBE_TOPIC = "toApp/#"
+
+SUBSCRIBE_TOPIC = "toClient/#"
+
 
 def on_connect(client, userdata, flags, rc):
   print("Connected with result code "+str(rc))

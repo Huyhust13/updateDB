@@ -170,6 +170,7 @@ int MqttClientUpdate::updateDB(QByteArray message)
             LOG(ERROR) << e.what();
             addedFail_jsonVec.push_back(json_person);
             LOG(INFO) << "<" << __func__ << "> Have " << addedFail_jsonVec.size() << " json added Fail";
+            return 1;
         }
 
     }
@@ -177,19 +178,24 @@ int MqttClientUpdate::updateDB(QByteArray message)
 
     ///< ------ REMOVE --------
     cnt = 0;
-    total = j["remove"].size();
-    for (uint i=0; i < total; i++){
-        QString removed_per = QString::fromStdString(j["remove"][i]);
-        if(sqlitedb.removePerson(removed_per)){
-            LOG(INFO) << "[DB-REMOVE] removed " << removed_per.toStdString();
-            cnt++;
+    try {
+        total = j["remove"].size();
+        for (uint i=0; i < total; i++){
+            QString removed_per = QString::fromStdString(j["remove"][i]);
+            if(sqlitedb.removePerson(removed_per)){
+                LOG(INFO) << "[DB-REMOVE] removed " << removed_per.toStdString();
+                cnt++;
+            }
+            else{
+                removedFail_jsonVec.push_back(removed_per);
+            }
         }
-        else{
-            removedFail_jsonVec.push_back(removed_per);
-        }
+        LOG(INFO) << "[UPDATE-DB] Removed: " << cnt << " done! " << total-cnt << " fail.";
     }
-    LOG(INFO) << "[UPDATE-DB] Removed: " << cnt << " done! " << total-cnt << " fail.";
-
+    catch (json::exception &e){
+        LOG(ERROR) << e.what();
+        return 1;
+    }
 
     ///< ADD UPDATE TO VECTOR
     cnt = 0;
@@ -253,6 +259,7 @@ int MqttClientUpdate::updateDB(QByteArray message)
             LOG(ERROR) << e.what();
             updatedFail_jsonVec.push_back(json_person);
             LOG(INFO) << "[DB-UPDATE] Update fail";
+            return 1;
         }
 
     }

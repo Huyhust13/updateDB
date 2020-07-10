@@ -31,6 +31,6 @@ if __name__ == "__main__":
 
     # Test request
 
-    # publish_request()
-    pub_db_update()
+    publish_request()
+    # pub_db_update()
 
