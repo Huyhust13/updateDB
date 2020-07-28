@@ -10,19 +10,5 @@ int main(int argc, char *argv[])
 
     MqttClientUpdate mqttClient;
 
-
-
-    // =========================
-    ///< TEST sqlideDB:
-#if 0
-    SQLiteDB sqliteDB;
-
-    sqliteDB.setDBPath("cts_client.db");
-    sqliteDB.setDBTable("CTS");
-    sqliteDB.openDatabase();
-    sqliteDB.exportIDs();
-//    sqliteDB.removePerson("CMCTS-NGUYENTHITHU-0567");
-#endif
-
     return a.exec();
 }

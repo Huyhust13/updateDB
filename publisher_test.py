@@ -25,12 +25,12 @@ def pub_db_update():
 
 if __name__ == "__main__":
     m_client = mqtt.Client()
-    broker = "localhost"
+    broker = "192.168.1.84"
     port = 1883
     m_client.connect(broker, port, keepalive=60)
 
     # Test request
 
-    # publish_request()
-    pub_db_update()
+    publish_request()
+    # pub_db_update()
 

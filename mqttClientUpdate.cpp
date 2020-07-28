@@ -216,7 +216,7 @@ int MqttClientUpdate::updateDB(QByteArray message)
                 person.department = QString::fromStdString(json_person["department"]);
             }
             else{
-                person.department = "UNKNOWN";
+                person.department = "UNKNOWN";CTS
             }
 
             if(json_person["level"] != nullptr){
@@ -253,6 +253,7 @@ int MqttClientUpdate::updateDB(QByteArray message)
             LOG(ERROR) << e.what();
             updatedFail_jsonVec.push_back(json_person);
             LOG(INFO) << "[DB-UPDATE] Update fail";
+            return 1;
         }
 
     }

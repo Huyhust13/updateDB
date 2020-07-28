@@ -42,7 +42,6 @@ public:
     void initDatabase();
     void openDatabase();
     void closeDatabase();
-//    PersonInfo seachInfo(QString key, PersonInfo& person);
     int insertPerson(PersonInfo person);
     int removePerson(QString key);
     int updateInfo(PersonInfo person);
@@ -52,25 +51,10 @@ public:
     QJsonDocument exportIDs();
     void test();
 
-//signals:
-//    void publishListID(QByteArray ListIDarr);
-//    void ListIDtoPub(QJsonDocument jsonDoc);
-
 private:
     QString dbPath;
     QString dbTableName;
     QSqlDatabase db;
-
-//private:
-//    QVector<PersonInfo> added_vec;
-//    QVector<json> addedFail_jsonVec;
-//    QVector<PersonInfo> addedFail_PersonVec;
-//    QVector<QString> removed_vec;
-//    QVector<json> removedFail_vec;
-//    QVector<QString> removedFail_StringVec;
-//    QVector<PersonInfo> updated_vec;
-//    QVector<json> updatedFail_vec;
-//    QVector<PersonInfo> updatedFail_PersonInfoVec;
 
 };
 
