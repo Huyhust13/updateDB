@@ -32,4 +32,5 @@ HEADERS += \
 LIBS += -L/usr/local/lib -lglog
 
 DISTFILES += \
+    subscriber_test.py \
     updateDB.conf

@@ -4,6 +4,8 @@ import paho.mqtt.client as mqtt
 import sys
 # This is the Subscriber
 
+# SUBSCRIBE_TOPIC = "toApp/#"
+
 SUBSCRIBE_TOPIC = "toClient/#"
 
 def on_connect(client, userdata, flags, rc):
@@ -33,4 +35,3 @@ client.on_connect = on_connect
 client.on_message = on_message
 
 client.loop_forever()
-
