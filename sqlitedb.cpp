@@ -9,8 +9,6 @@ SQLiteDB::SQLiteDB(QObject *parent) : QObject(parent)
     LOG(INFO) << "[DEBUG] dbPath: " << dbPath.toStdString();
     LOG(INFO) << "[DEBUG] dbTableName: " << dbTableName.toStdString();
 #endif
-//    openDatabase();
-
 }
 
 SQLiteDB::~SQLiteDB(){}
@@ -18,12 +16,12 @@ SQLiteDB::~SQLiteDB(){}
 void SQLiteDB::initDatabase()
 {
     QString dbType = "QSQLITE";
-//    QSqlDatabase db = QSqlDatabase::addDatabase(dbType);
 
     db = QSqlDatabase::addDatabase(dbType);
     db.setDatabaseName(dbPath);
     LOG(INFO) << "[InitDatabase] DB Path: " << dbPath.toStdString();
 }
+
 void SQLiteDB::openDatabase()
 {
     if(!db.open()){
@@ -50,60 +48,75 @@ void SQLiteDB::setDBTable(QString DBTableName)
     dbTableName = DBTableName;
 }
 
+/**
+ * @brief SQLiteDB::insertPerson - Chen them du lieu nguoi moi vao db
+ * @param person - Thong tin nguoi moi
+ * @return  - 1 neu chen thanh cong hoac nguoi nay da ton tai
+ *          - 0 neu co loi
+ */
 int SQLiteDB::insertPerson(PersonInfo person)
 {
-    LOG(INFO) << "[INSERT] Inserting " << person.recognize_name.toStdString() << " to db...";
-
-//    QSqlDatabase db = QSqlDatabase::database(dbPath);
-//    QString table_name = TABLE_NAME;
+    LOG(INFO) << "[INSERT] Inserting " << person.recognize_id.toStdString()
+              << " to db...";
 
     ///< Check if info already exists in the DB
     QSqlQuery query_check(db);
-    query_check.prepare("SELECT * FROM " + dbTableName + " WHERE recognize_name = ?;");
-    query_check.addBindValue(person.recognize_name);
+    query_check.prepare("SELECT * FROM " + dbTableName + " WHERE recognize_id = ?;");
+    query_check.addBindValue(person.recognize_id);
     if(!query_check.exec()){
-        LOG(ERROR) << "<" << __func__ << "> check duplicate Fails [" << db.lastError().text().toStdString() << "]";
-        return 1;
+        LOG(ERROR) << "<" << __func__ << "> check duplicate Fails ["
+                   << db.lastError().text().toStdString() << "]";
+        return 0;
     }
 
     while (query_check.next()) {
-        LOG(WARNING) << "ID: " + person.recognize_name.toStdString() + " exist!";
+        LOG(WARNING) << "ID: " + person.recognize_id.toStdString() + " exist!";
         return 1;
     }
 
     QSqlQuery query(db);
     QString exec_str;
-    exec_str = "INSERT INTO " + dbTableName + " (recognize_name, FullName, EmployeeID, Department, Level, Avatar)"
-               + "VALUES (:recognize_name, :fullName, :employeeID, :department, :level, :avatar);";
+    exec_str = "INSERT INTO " + dbTableName
+                + " (recognize_id, FullName, Department, Company, Avatar)"
+                + "VALUES (:recognize_id, :fullName, :department, :company, :avatar);";
+
+#ifdef LOG_DEBUG
+    LOG(INFO) << "Info of: " << person.recognize_id.toStdString()
+              << " - fullName: " << person.fullName.toStdString()
+              << " - department: " << person.department.toStdString()
+              << " - company: " << person.company.toStdString();
+
+#endif
 
     query.prepare(exec_str);
-    query.bindValue(":recognize_name", person.recognize_name);
+    query.bindValue(":recognize_id", person.recognize_id);
     query.bindValue(":fullName", person.fullName);
-    query.bindValue(":employeeID", person.employeeID);
     query.bindValue(":department", person.department);
-    query.bindValue(":level", person.level);
+    query.bindValue(":company", person.company);
     query.bindValue(":avatar", person.avtByteArray);
 
     if(query.exec()){
         LOG(INFO) << "<" << __func__ << "> Inserted successful!";
-        return true;
+        return 1;
     }
     else{
         LOG(ERROR) << "<" << __func__ << "> Inserting Fails [" << db.lastError().text().toStdString() << "]";
-        return false;
+        return 0;
     }
-//    return 0;
 }
 
+/**
+ * @brief SQLiteDB::removePerson - Xoa thong tin nguoi khoi db
+ * @param key - primary key: recognize_id
+ * @return
+ */
 int SQLiteDB::removePerson(QString key)
 {
     LOG(INFO) << "<" << __func__ << "> Removing " << key.toStdString();
 
-//    QSqlDatabase db = QSqlDatabase::database(dbPath);
-
     QSqlQuery query(db);
     QString exec_str;
-    exec_str = "DELETE FROM " + dbTableName + " WHERE recognize_name = ?;";
+    exec_str = "DELETE FROM " + dbTableName + " WHERE recognize_id = ?;";
 
     query.prepare(exec_str);
     query.addBindValue(key);
@@ -112,23 +125,27 @@ int SQLiteDB::removePerson(QString key)
         return true;
     }
     else{
-        LOG(ERROR) << "<" << __func__ << "> Removing Fails [" << db.lastError().text().toStdString() << "]";
+        LOG(ERROR) << "<" << __func__ << "> Removing Fails ["
+                   << db.lastError().text().toStdString() << "]";
         return false;
     }
 
 }
 
+/**
+ * @brief SQLiteDB::updateInfo - Ham cap nhat vao db thong tin nguoi da co
+ * @param person - thong tin day du nguoi cap nhat
+ * @return
+ */
 int SQLiteDB::updateInfo(PersonInfo person)
 {
-    LOG(INFO) << "<" << __func__ << "> Updating " << person.recognize_name.toStdString() << " to db...";
-
-//    QSqlDatabase db = QSqlDatabase::database(dbPath);
-//    QString table_name = TABLE_NAME;
+    LOG(INFO) << "<" << __func__ << "> Updating "
+              << person.recognize_name.toStdString() << " to db...";
 
     ///< Check if info already exists in the DB
     QSqlQuery query_check(db);
-    query_check.prepare("SELECT * FROM " + dbTableName + " WHERE recognize_name = ?;");
-    query_check.addBindValue(person.recognize_name);
+    query_check.prepare("SELECT * FROM " + dbTableName + " WHERE recognize_id = ?;");
+    query_check.addBindValue(person.recognize_id);
 
     //// Check if info exists
     //    if(!query_check.exec()){
@@ -144,21 +161,19 @@ int SQLiteDB::updateInfo(PersonInfo person)
     QSqlQuery query(db);
     QString exec_str;
     exec_str = "UPDATE " + dbTableName + " SET FullName = :fullName,"
-                                         " EmployeeID = :employeeID, "
                                          "Department = :department, "
-                                         "Level = :level, "
-                                         "Avatar = :avatar,"
-                                         " Version = :version"
-                                         " WHERE recognize_name = :recognize_name;";
+                                         "Avatar = :avatar, "
+                                         " Version = :version, "
+                                         " recognize_name = :recognize_name"
+                                         " WHERE recognize_id = :recognize_id;";
 
     query.prepare(exec_str);
     query.bindValue(":fullName", person.fullName);
-    query.bindValue(":employeeID", person.employeeID);
     query.bindValue(":department", person.department);
-    query.bindValue(":level", person.level);
     query.bindValue(":avatar", person.avtByteArray);
     query.bindValue(":version", person.ver);
     query.bindValue(":recognize_name", person.recognize_name);
+    query.bindValue(":recognize_id", person.recognize_id);
 
 //    query.prepare("UPDATE CTS SET FullName = 'Phan Tuấn Nghĩaasdfb' WHERE recognize_name = 'CMCTS-PHANTUANNGHIA-0695'");
     if(query.exec()){
@@ -186,8 +201,7 @@ QJsonDocument SQLiteDB::exportIDs()
 
     QSqlQuery query(db);
     QString exec_str;
-    exec_str = "SELECT recognize_name, Version FROM " + dbTableName;
-//    exec_str = "SELECT recognize_name FROM " + dbTableName;
+    exec_str = "SELECT recognize_id, Version FROM " + dbTableName;
 
 #if export_to_file
     QString listID = "listIDs.txt";
@@ -218,17 +232,14 @@ QJsonDocument SQLiteDB::exportIDs()
             LOG(INFO) << query.value(i).toString().toStdString();
         }
 #else
-        QString recognize_name = query.value(0).toString();
+        QString recognize_id = query.value(0).toString();
         QString ver = query.value(1).toString();
 
-        //FIXME: add update version for old database
-
-
-        LOG(INFO) << "<" << __func__ << "> ID-ver: " << recognize_name.toStdString() << " - " << ver.toStdString();
+        LOG(INFO) << "<" << __func__ << "> ID-ver: " << recognize_id.toStdString() << " - " << ver.toStdString();
 #if export_to_file
-        stream << recognize_name << " " << ver << endl;
+        stream << recognize_id << " " << ver << endl;
 #else
-        IDObject.insert("id", recognize_name);
+        IDObject.insert("id", recognize_id);
         IDObject.insert("ver", ver);
         IDsArr.push_back(IDObject);
 #endif
@@ -241,76 +252,3 @@ QJsonDocument SQLiteDB::exportIDs()
     QJsonDocument jsonDoc( IDsArr );
     return jsonDoc;
 }
-
-#if 0
-void SQLiteDB::updateDB()
-{
-    LOG(INFO) << "<" << __func__ << "> Starting update database...";
-
-    SQLiteDB db;
-
-    db.openDatabase();
-
-    uint cnt = 1;
-    uint total = removed_vec.size();
-    ///< REMOVE
-    if(total){
-        for(QString element : removed_vec){
-            LOG(INFO) << "<" << __func__ << "> Removing: " << cnt << "/" << total;
-            if(!db.removePerson(element)){
-                removedFail_StringVec.push_back(element);
-            }
-            cnt++;
-        }
-        LOG(INFO) << "<" << __func__ << "> REMOVE: " << total - removedFail_StringVec.size() << " Successfull - " \
-                  << removedFail_StringVec.size() << " Fail!";
-    }
-    else{
-        LOG(INFO) << "<" << __func__ << "> Nothing to remove";
-    }
-
-    ///< ADD
-    cnt = 1;
-    total = added_vec.size();
-    if(total){
-        for(PersonInfo element : added_vec){
-            LOG(INFO) << "<" << __func__ << "> Adding: " << cnt << "/" << total;
-            if(!db.insertPerson(element)){
-                addedFail_PersonVec.push_back(element);
-            }
-            cnt++;
-        }
-        LOG(INFO) << "<" << __func__ << "> ADD: " << total - addedFail_PersonVec.size() << " Successfull - " \
-                  << addedFail_PersonVec.size() << " Fail!";
-    }
-    else{
-        LOG(INFO) << "<" << __func__ << "> Nothing to add";
-    }
-
-    ///< UPDATE
-    cnt = 1;
-    total = updated_vec.size();
-    if(total){
-        for (PersonInfo person : updated_vec) {
-            LOG(INFO) << "<" << __func__ << "> Updating: " << cnt << "/" << total;
-            if(!db.updateInfo(person)){
-                updatedFail_PersonInfoVec.push_back(person);
-            }
-            cnt++;
-        }
-        LOG(INFO) << "<" << __func__ << "> UPDATE: " << total - updatedFail_PersonInfoVec.size() << " Successfull - " \
-                  << updatedFail_PersonInfoVec.size() << " Fail!";
-    }
-    else{
-        LOG(INFO) << "<" << __func__ << "> Nothing to update";
-    }
-
-//    db.exportIDs();
-
-}
-
-void SQLiteDB::test()
-{
-    LOG(INFO) << "[TEST] " << db.isOpen();
-}
-#endif

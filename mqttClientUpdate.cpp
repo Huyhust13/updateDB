@@ -3,7 +3,7 @@
 
 MqttClientUpdate::MqttClientUpdate(QObject *parent) : QObject(parent)
 {
-#ifdef LOG_DEBUG
+#ifdef LOG_DEBUG_NO
     LOG(INFO) << "[DEBUG] " << __func__;
 #endif
 
@@ -23,8 +23,6 @@ MqttClientUpdate::MqttClientUpdate(QObject *parent) : QObject(parent)
 
     m_client->connectToHost();
     m_topics = MQTT_TOPIC_COMMON;
-
-//    sqlitedb.setDBPath(SQLITE_DBPATH);
 
     QSettings setting("updateDB.conf", QSettings::IniFormat);
     QString dbPath = setting.value("dbPath", "UNKNOWN").toString();
@@ -71,7 +69,6 @@ void MqttClientUpdate::messageReceived(const QByteArray &message, const QMqttTop
     if(topic == MQTT_SUBTOPIC_REQUEST_RECEIVED){
         /// received request from Window Form
         /// Export List IDs and publish to Broker
-        ///
         sqlitedb.openDatabase();
         QJsonDocument jsondoc = sqlitedb.exportIDs();
         sqlitedb.closeDatabase();
@@ -89,24 +86,24 @@ void MqttClientUpdate::messageReceived(const QByteArray &message, const QMqttTop
 
 }
 
-//void MqttClientUpdate::receivedDBUpdatedData()
-//{
-//    LOG(INFO) << "<" << __func__ << ">";
-////    return 1;
-//}
-
 MqttClientUpdate::~MqttClientUpdate(){};
 
+/**
+ * @brief MqttClientUpdate::updateDB - Nhan json message
+ *        phan tach ra tung phan: add, remove, update de thuc hien cap nhat db
+ * @param message
+ * @return - 0 - Neu thanh cong
+ *           1 - Neu that bai
+ */
 int MqttClientUpdate::updateDB(QByteArray message)
 {
-    //    QJsonDocument doc = QJsonDocument::fromJson(message);
-    //    QJsonObject jObject = doc.object();
-    //    QJsonValue
-
     message.replace("\'", "\"");
     QString messageStr = QString(message);
 
-    //    LOG(INFO) << "MessageStr: " <<  messageStr.toStdString();
+#ifdef LOG_DEBUG_NO
+    LOG(INFO) << "message update: " << messageStr.toStdString();
+#endif
+
     json j = json::parse(message);
     uint cnt = 0;
     uint total = j["add"].size();
@@ -117,7 +114,7 @@ int MqttClientUpdate::updateDB(QByteArray message)
         json json_person = j["add"][i];
         try {
             if(json_person["id"] != nullptr){
-                person.recognize_name = QString::fromStdString(json_person["id"]);
+                person.recognize_id = QString::fromStdString(json_person["id"]);
             }
             else{
                 throw;
@@ -137,22 +134,24 @@ int MqttClientUpdate::updateDB(QByteArray message)
                 person.department = "UNKNOWN";
             }
 
-            if(json_person["level"] != nullptr){
-                person.level = QString::fromStdString(json_person["level"]);
+            if(json_person["company"] != nullptr){
+                person.company = QString::fromStdString(json_person["company"]);
             }
             else{
-                person.level = 1;
+                person.company = "UNKNOWN";
             }
+
+            // Chu su dung phan nay
+//            if(json_person["level"] != nullptr){
+//                person.level = QString::fromStdString(json_person["level"]);
+//            }
+//            else{
+//                person.level = 1;
+//            }
 
             if(json_person["avt"] != nullptr){
                 QByteArray base64Avt = QByteArray::fromStdString(json_person["avt"]);
-                //                QImage avt_img;
-                //                avt_img.loadFromData(QByteArray::fromBase64(base64Avt));
-                //                person.avt = avt_img;
                 person.avtByteArray = base64Avt;
-#if 0
-                LOG(INFO) << person.avt.bits();
-#endif
             }
 
             if(json_person["ver"] != nullptr){
@@ -164,7 +163,6 @@ int MqttClientUpdate::updateDB(QByteArray message)
                 cnt ++;
             }
             else{ throw;}
-            //                LOG(INFO) << "<" << __func__ << "> " << i << " - recognize_name" << j["add"][i]["id"];
 
         } catch (json::exception &e) {
             LOG(ERROR) << e.what();
@@ -205,7 +203,7 @@ int MqttClientUpdate::updateDB(QByteArray message)
         json json_person = j["update"][i];
         try {
             if(json_person["id"] != nullptr){
-                person.recognize_name = QString::fromStdString(json_person["id"]);
+                person.recognize_id = QString::fromStdString(json_person["id"]);
             }
             else{
                 throw;
@@ -222,7 +220,14 @@ int MqttClientUpdate::updateDB(QByteArray message)
                 person.department = QString::fromStdString(json_person["department"]);
             }
             else{
-                person.department = "UNKNOWN";CTS
+                person.department = "UNKNOWN";
+            }
+
+            if(json_person["company"] != nullptr){
+                person.company = QString::fromStdString(json_person["company"]);
+            }
+            else{
+                person.company = "UNKNOWN";
             }
 
             if(json_person["level"] != nullptr){
@@ -271,5 +276,4 @@ int MqttClientUpdate::updateDB(QByteArray message)
 
 #endif
     return 0;
-
 }

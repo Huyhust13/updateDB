@@ -13,18 +13,16 @@
 typedef struct{
     QString recognize_name;
     QString recognize_id;
-//    qint8 tracking_id;
     QString tracking_id;
     QDateTime updatedAt;
-    QImage detected_face;
 
     QString fullName;
-    QString employeeID;
     QString department = "unknown";
+    QString company = "unknown";
     QString level;
     QImage avt = QImage("files/unknown_person.png");
-    QByteArray avtByteArray;
     quint8 ver =  1;
+    QByteArray avtByteArray;
 }PersonInfo;
 
 #define MQTT_TOPIC_COMMON "toClient/#"

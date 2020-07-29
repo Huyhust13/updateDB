@@ -17,7 +17,8 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         mqttClientUpdate.cpp \
-        sqlitedb.cpp
+        sqlitedb.cpp \
+        utils.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -27,10 +28,12 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 HEADERS += \
     common.h \
     mqttClientUpdate.h \
-    sqlitedb.h
+    sqlitedb.h \
+    utils.h
 
 LIBS += -L/usr/local/lib -lglog
 
 DISTFILES += \
+    readme.md \
     subscriber_test.py \
     updateDB.conf
