@@ -27,11 +27,10 @@ public:
     void receivedRequest();
     void receivedDBUpdatedData();
     int updateDB(QByteArray message);
+
 private slots:
     void messageReceived(const QByteArray &message, const QMqttTopicName &topic);
     void stateChanged(QMqttClient::ClientState state);
-//    void subscriptionStateChanged(QMqttSubscription::SubscriptionState state);
-//    void publish();
 
 private:
     QMqttClient *m_client;

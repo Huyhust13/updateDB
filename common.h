@@ -23,6 +23,7 @@ typedef struct{
     QImage avt = QImage("files/unknown_person.png");
     quint8 ver =  1;
     QByteArray avtByteArray;
+    QString is_access = "NO";
 }PersonInfo;
 
 #define MQTT_TOPIC_COMMON "toClient/#"
@@ -31,10 +32,5 @@ typedef struct{
 #define MQTT_TOPIC_REQUEST_RESPONSE tr("toApp/DB_Status_Ack")
 #define MQTT_SUBTOPIC_DBUPDATED_RECEIVED tr("toClient/DB_Data")
 #define MQTT_TOPIC_UPDATED_STATUS_RESPONSE tr("toApp/Updated_Status")
-
-//#define SQLITE_DBPATH
-//#define SQLITE_DBPATH "/media/huynv/Data/02.Project_SmartCamera/08.GUI/build-FaceAppGui_v20-Desktop_Qt_5_12_6_GCC_64bit-Debug/db/cts_client.db"
-//#define SQLITE_DBTABLE "CTS"
-
 
 #endif // COMMON_H

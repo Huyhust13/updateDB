@@ -158,6 +158,14 @@ int MqttClientUpdate::updateDB(QByteArray message)
                 person.ver = json_person["ver"];
             }
 
+            if(json_person["is_access"] != nullptr){
+                person.is_access = QString::fromStdString(json_person["is_access"]);
+            }
+            else {
+                //FIXME: Chua co co che cap nhat tu app winform nen de nhu vay
+                person.is_access = "YES";
+            }
+
             if(sqlitedb.insertPerson(person)){
                 LOG(INFO) << "[INSERT] inserted " << person.fullName.toStdString() << " successful!";
                 cnt ++;
@@ -230,12 +238,12 @@ int MqttClientUpdate::updateDB(QByteArray message)
                 person.company = "UNKNOWN";
             }
 
-            if(json_person["level"] != nullptr){
-                person.level = QString::fromStdString(json_person["level"]);
-            }
-            else{
-                person.level = 1;
-            }
+//            if(json_person["level"] != nullptr){
+//                person.level = QString::fromStdString(json_person["level"]);
+//            }
+//            else{
+//                person.level = 1;
+//            }
 
             if(json_person["avt"] != nullptr){
                 QByteArray base64Avt = QByteArray::fromStdString(json_person["avt"]);
@@ -250,6 +258,15 @@ int MqttClientUpdate::updateDB(QByteArray message)
 
             if(json_person["ver"] != nullptr){
                 person.ver = json_person["ver"];
+            }
+
+
+            if(json_person["is_access"] != nullptr){
+                person.is_access = QString::fromStdString(json_person["is_access"]);
+            }
+            else {
+                //FIXME: Chua co co che cap nhat tu app winform nen de nhu vay
+                person.is_access = "YES";
             }
 
             if(sqlitedb.updateInfo(person)){
