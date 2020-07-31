@@ -81,6 +81,10 @@ void MqttClientUpdate::messageReceived(const QByteArray &message, const QMqttTop
         /// Update Local DB follow window form
         sqlitedb.openDatabase();
         updateDB(message);
+        if(is_dbChange){
+            sqlitedb.vacuumDB();
+            is_dbChange = false;
+        }
         sqlitedb.closeDatabase();
     }
 
@@ -105,6 +109,11 @@ int MqttClientUpdate::updateDB(QByteArray message)
 #endif
 
     json j = json::parse(message);
+
+    if(j["add"].size() || j["remove"].size() || j["update"].size()){
+        is_dbChange = true;
+    }
+
     uint cnt = 0;
     uint total = j["add"].size();
 #if 1
@@ -185,7 +194,7 @@ int MqttClientUpdate::updateDB(QByteArray message)
     ///< ------ REMOVE --------
     cnt = 0;
     try {
-        total = j["remove"].size();
+        total= j["remove"].size();
         for (uint i=0; i < total; i++){
             QString removed_per = QString::fromStdString(j["remove"][i]);
             if(sqlitedb.removePerson(removed_per)){

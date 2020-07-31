@@ -47,6 +47,8 @@ public:
     int updateInfo(PersonInfo person);
     bool checkDuplicate(QString key);
 
+    int vacuumDB();
+
 //    void updateDB();
     QJsonDocument exportIDs();
     void test();

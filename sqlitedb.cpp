@@ -124,11 +124,14 @@ int SQLiteDB::removePerson(QString key)
     query.addBindValue(key);
     if(query.exec()){
 //        LOG(INFO) << "<" << __func__ << "> Removed successful!";
+//        if(query.exec("VACUUM")){
+//            LOG(INFO) << __func__ << " - VACUUM successful!";
+//        }
         return true;
     }
     else{
-        LOG(ERROR) << "<" << __func__ << "> Removing Fails ["
-                   << db.lastError().text().toStdString() << "]";
+        LOG(ERROR) << "<" << __func__ << "> Removing Fails. Err: "
+                   << db.lastError().text().toStdString();
         return false;
     }
 
@@ -223,8 +226,8 @@ QJsonDocument SQLiteDB::exportIDs()
         LOG(INFO) << "[DEBUG] dbPath: " << dbPath.toStdString();
         LOG(INFO) << "[DEBUG] dbTableName: " << dbTableName.toStdString();
 #endif
-        LOG(ERROR) << "<" << __func__ << "> export IDs Fails ["
-                   << db.lastError().text().toStdString() << "]";
+        LOG(ERROR) << "<" << __func__ << "> export IDs Fails. Err: "
+                   << db.lastError().text().toStdString();
     }
 
     while (query.next()) {
@@ -255,4 +258,16 @@ QJsonDocument SQLiteDB::exportIDs()
 #endif
     QJsonDocument jsonDoc( IDsArr );
     return jsonDoc;
+}
+
+int SQLiteDB::vacuumDB()
+{
+    QSqlQuery query(db);
+    if(!query.exec("VACUUM")){
+       LOG(ERROR) << "[DB-Update] - VACUUM fails" << db.lastError().text().toStdString();
+    }
+    else {
+        LOG(INFO) << "[DB-Update] - VACUUM DB Done!";
+    }
+    return 0;
 }

@@ -45,6 +45,9 @@ private:
     QVector<json> addedFail_jsonVec;
     QVector<QString> removedFail_jsonVec;
     QVector<json> updatedFail_jsonVec;
+
+public:
+    bool is_dbChange = false;
 };
 
 #endif // MQTTCLIENTUPDATE_H
